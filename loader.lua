@@ -7,28 +7,24 @@ local camera = ws.CurrentCamera
 local players = game:GetService("Players")
 local replicatedStorage = game:GetService("ReplicatedStorage")
 
--- Удаляем старые GUI
 for _, v in pairs(player.PlayerGui:GetChildren()) do
     if v.Name:find("ShadowCore_MM2") then v:Destroy() end
 end
 
--- ================= СОЗДАНИЕ GUI =================
 local gui = Instance.new("ScreenGui")
 gui.Name = "ShadowCore_MM2"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 340, 0, 420)
+mainFrame.Size = UDim2.new(0, 340, 0, 380)
 mainFrame.Position = UDim2.new(0, 10, 0, 10)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 mainFrame.BackgroundTransparency = 0.2
 mainFrame.BorderSizePixel = 0
 mainFrame.Draggable = true
 mainFrame.Parent = gui
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 8)
-corner.Parent = mainFrame
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 30)
@@ -50,40 +46,32 @@ local function makeBtn(name, text, y, callback)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 14
     btn.Parent = mainFrame
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = btn
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
 local espBtn = makeBtn("ESP", "ESP: OFF", 40, nil)
 local aimBtn = makeBtn("AimBot", "AIMBOT: OFF", 85, nil)
-local triggerBtn = makeBtn("TriggerBot", "TRIGGER: OFF", 130, nil)
-local farmBtn = makeBtn("FarmCoins", "FARM: OFF", 175, nil)
-local noclipBtn = makeBtn("Noclip", "NOCLIP: OFF", 220, nil)
-local autoKillBtn = makeBtn("AutoKill", "AUTOKILL: OFF", 265, nil)
-local infoBtn = makeBtn("Info", "INFO", 310, nil)
+local farmBtn = makeBtn("FarmCoins", "FARM: OFF", 130, nil)
+local noclipBtn = makeBtn("Noclip", "NOCLIP: OFF", 175, nil)
+local autoKillBtn = makeBtn("AutoKill", "AUTOKILL: OFF", 220, nil)
+local infoBtn = makeBtn("Info", "INFO", 265, nil)
 
--- ================= ПЕРЕМЕННЫЕ =================
 local espEnabled = false
 local aimbotEnabled = false
-local triggerEnabled = false
 local farmEnabled = false
 local noclipEnabled = false
 local autoKillEnabled = false
-
 local espObjects = {}
 local noclipConn = nil
 
--- ================= GOD MODE =================
+-- GOD MODE
 local godModeTasks = {}
-
 local function startGodMode(character)
     local humanoid = character:FindFirstChild("Humanoid")
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not humanoid then return end
-
     local healthTask = rs.RenderStepped:Connect(function()
         if humanoid and humanoid.Parent then
             humanoid.Health = math.huge
@@ -92,16 +80,12 @@ local function startGodMode(character)
         end
     end)
     table.insert(godModeTasks, healthTask)
-
     local fallTask = rs.RenderStepped:Connect(function()
         if rootPart and rootPart.Parent then
-            if rootPart.Position.Y < -50 then
-                rootPart.CFrame = CFrame.new(0, 50, 0)
-            end
+            if rootPart.Position.Y < -50 then rootPart.CFrame = CFrame.new(0, 50, 0) end
         end
     end)
     table.insert(godModeTasks, fallTask)
-
     local diedConn = humanoid.Died:Connect(function()
         if humanoid and humanoid.Parent then
             humanoid.Health = math.huge
@@ -113,9 +97,7 @@ local function startGodMode(character)
 end
 
 local function stopGodMode()
-    for _, task in ipairs(godModeTasks) do
-        pcall(function() task:Disconnect() end)
-    end
+    for _, task in ipairs(godModeTasks) do pcall(function() task:Disconnect() end) end
     godModeTasks = {}
 end
 
@@ -127,7 +109,7 @@ end
 player.CharacterAdded:Connect(applyGodModeToCharacter)
 if player.Character then applyGodModeToCharacter(player.Character) end
 
--- ================= РОЛИ =================
+-- ROLES
 local function getPlayerRole(plr)
     local character = plr.Character
     if not character then return "Innocent" end
@@ -153,14 +135,12 @@ end
 
 local function getMurderer()
     for _, other in pairs(players:GetPlayers()) do
-        if other ~= player and getPlayerRole(other) == "Murderer" then
-            return other
-        end
+        if other ~= player and getPlayerRole(other) == "Murderer" then return other end
     end
     return nil
 end
 
--- ================= ESP =================
+-- ESP
 local function updateESP()
     if not espEnabled then
         for _, obj in pairs(espObjects) do obj:Destroy() end
@@ -199,41 +179,13 @@ local function updateESP()
     end
 end
 
--- ================= AIMBOT =================
+-- AIMBOT
 local function aimbot()
     if not aimbotEnabled then return end
     if getPlayerRole(player) ~= "Sheriff" then return end
     local murderer = getMurderer()
     if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
-        local targetPos = murderer.Character.HumanoidRootPart.Position
-        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
-    end
-end
-
--- ================= TRIGGERBOT =================
-local function isVisible(targetCharacter)
-    local origin = camera.CFrame.Position
-    local targetPart = targetCharacter:FindFirstChild("HumanoidRootPart")
-    if not targetPart then return false end
-    local targetPos = targetPart.Position
-    local ray = Ray.new(origin, (targetPos - origin).Unit * (targetPos - origin).Magnitude)
-    local hit = workspace:FindPartOnRay(ray, player.Character)
-    return hit and hit:IsDescendantOf(targetCharacter)
-end
-
-local function triggerbot()
-    if not triggerEnabled then return end
-    if getPlayerRole(player) ~= "Sheriff" then return end
-    local murderer = getMurderer()
-    if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
-        if isVisible(murderer.Character) then
-            local gun = player.Character and player.Character:FindFirstChildOfClass("Tool")
-            if gun and gun.Name:find("Gun") then
-                gun:Activate()
-                local shootRemote = replicatedStorage:FindFirstChild("Shoot") or replicatedStorage:FindFirstChild("Fire")
-                if shootRemote and shootRemote:IsA("RemoteEvent") then shootRemote:FireServer() end
-            end
-        end
+        camera.CFrame = CFrame.new(camera.CFrame.Position, murderer.Character.HumanoidRootPart.Position)
     end
 end
 
@@ -246,7 +198,7 @@ uis.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ================= NOCLIP =================
+-- NOCLIP
 local function enableNoclip()
     if noclipEnabled then
         if noclipConn then noclipConn:Disconnect() end
@@ -269,7 +221,7 @@ local function enableNoclip()
     end
 end
 
--- ================= FARM COINS =================
+-- FARM COINS (МЕДЛЕННЫЙ)
 local function findCoins()
     local coins = {}
     for _, obj in pairs(ws:GetDescendants()) do
@@ -302,7 +254,7 @@ local function collectCoins()
                         hrp.CFrame = CFrame.new(targetPos)
                         rs.RenderStepped:Wait()
                     else break end
-                    wait(0.25)
+                    wait(0.5)
                 end
             end
         end
@@ -313,11 +265,11 @@ end
 coroutine.wrap(function()
     while true do
         if farmEnabled then collectCoins() end
-        wait(0.3)
+        wait(1)
     end
 end)()
 
--- ================= AUTOKILL =================
+-- AUTOKILL
 local function autoKill()
     if not autoKillEnabled then return end
     local myRole = getPlayerRole(player)
@@ -348,23 +300,20 @@ local function autoKill()
                     wait(0.05)
                     camera.CFrame = CFrame.new(camera.CFrame.Position, targetHrp.Position)
                     gun:Activate()
-                    local shootRemote = replicatedStorage:FindFirstChild("Shoot") or replicatedStorage:FindFirstChild("Fire")
-                    if shootRemote and shootRemote:IsA("RemoteEvent") then shootRemote:FireServer() end
                 end
             end
         end
     end
 end
 
--- ================= ЦИКЛЫ =================
+-- LOOPS
 rs.RenderStepped:Connect(function()
     updateESP()
     aimbot()
-    triggerbot()
     if autoKillEnabled then autoKill() end
 end)
 
--- ================= КНОПКИ =================
+-- BUTTONS
 espBtn.MouseButton1Click:Connect(function()
     espEnabled = not espEnabled
     espBtn.Text = espEnabled and "ESP: ON" or "ESP: OFF"
@@ -375,12 +324,6 @@ aimBtn.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
     aimBtn.Text = aimbotEnabled and "AIMBOT: ON" or "AIMBOT: OFF"
     aimBtn.TextColor3 = aimbotEnabled and Color3.fromRGB(100,255,100) or Color3.fromRGB(255,100,100)
-end)
-
-triggerBtn.MouseButton1Click:Connect(function()
-    triggerEnabled = not triggerEnabled
-    triggerBtn.Text = triggerEnabled and "TRIGGER: ON" or "TRIGGER: OFF"
-    triggerBtn.TextColor3 = triggerEnabled and Color3.fromRGB(100,255,100) or Color3.fromRGB(255,100,100)
 end)
 
 farmBtn.MouseButton1Click:Connect(function()
@@ -402,7 +345,7 @@ autoKillBtn.MouseButton1Click:Connect(function()
     autoKillBtn.TextColor3 = autoKillEnabled and Color3.fromRGB(100,255,100) or Color3.fromRGB(255,100,100)
 end)
 
--- ================= ИНФО =================
+-- INFO
 local infoFrame = nil
 infoBtn.MouseButton1Click:Connect(function()
     if infoFrame and infoFrame.Parent then infoFrame:Destroy(); infoFrame = nil; return end
@@ -434,19 +377,14 @@ infoBtn.MouseButton1Click:Connect(function()
     infoText.TextSize = 13
     infoText.Font = Enum.Font.Gotham
     infoText.TextWrapped = true
-    infoText.Text = [[
-=== ShadowCore | MM2 ===
-
-ESP - shows player names and roles
-AimBot - aims at murderer (bind G)
-TriggerBot - auto shoots when visible
+    infoText.Text = [[=== ShadowCore | MM2 ===
+ESP - player names/roles
+AimBot - aims at murderer (G)
 Farm Coins - collects coins
 Noclip - walk through walls
-AutoKill - auto kills players
-God Mode - always enabled
-
-Made by ShadowCore]]
+AutoKill - auto kills
+God Mode - always on]]
     infoText.Parent = infoFrame
 end)
 
-print("ShadowCore loaded! God Mode active.")
+print("ShadowCore loaded!")
