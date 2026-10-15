@@ -1,5 +1,4 @@
--- murder mystery 2 skinchanger by belfor special for 
-
+--для клода
 local CONFIG = {
     InjectParticles = true,
     HideOriginal = true,
